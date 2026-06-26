@@ -145,7 +145,8 @@ Chosen: **#1**, with RAG (#2) layered on top for ad-hoc questions.
 | Tier | Examples | Why |
 |------|----------|-----|
 | Nordic/EU incumbents | ASSA ABLOY, Aptus, RCO, Axema, Salto, Gantner, Nedap, 2N, Axis (A16 controllers + readers) | Already CE-marked, EU-legal; some have OEM lines |
-| Global OEM/ODM (white-label friendly) | ZKTeco, Suprema, Hikvision, Dahua, Granding, Sebury + Shenzhen ODMs | Core of the "rebrand it" path — many explicitly offer private label |
+| Global access-terminal OEM/ODM | ZKTeco, Suprema, Hikvision, Dahua, **CiVinTec**, Granding, Sebury + Shenzhen ODMs | Core of the "rebrand it" path — many explicitly offer private label; CiVinTec CT-series adds 4G + BLE/NFC |
+| **Industrial cellular IoT controllers / RTUs (M2M)** | **Milesight (UC300), King Pigeon, Teracom, ControlByWeb, Robustel, NORVI, ThingsLog, Allockate** | **Where the LTE + native-MQTT + no-firmware matches actually live** — paired with a reader + lock; usually OEM/ODM-friendly. **Without this tier the engine misses the best-fit devices.** |
 | Reader/credential reference | HID, Elatec, STid; MIFARE/DESFire, OSDP standards | Reference only — to judge *which readers/credentials a controller supports* (a controller criterion, not a search target) |
 | Marketplaces / distributors | Alibaba, Made-in-China, Global Sources, EU distributors | MOQ, pricing, OEM terms, EU stock with existing CE |
 | Certification / DoC sources | EU DoC PDFs, EN 60839-11-1, RED/CE references | Verify who holds CE and whether rebranding is offered |
@@ -159,12 +160,19 @@ controller *criteria* (which credentials/readers it accepts, which locks it can 
 - **Credentials/RFID:** 125 kHz / 13.56 MHz (MIFARE Classic/DESFire), NFC, BLE/mobile, PIN, biometric
 - **Protocols/integration:** OSDP, Wiegand, MQTT, REST API, Modbus, relay outputs (decides whether
   it runs on the user's own stack)
+- **API type (verify — don't trust marketing):** `native-mqtt` vs `rest-http(s)` vs
+  `vendor-cloud-only`. Many "IoT-ready" 4G access terminals speak HTTP/HTTPS *to their own cloud*,
+  not MQTT to your broker — this is the field that separates a true fit from a near-miss.
+- **Programmability ("no firmware coding" lives here):** `config-only` / `rules-engine`
+  (e.g. Milesight's 16 edge rules) / `sdk-or-firmware-required` (e.g. Arduino-based boards).
 - **Connectivity/power:** PoE, WiFi, cellular, RS-485; 12/24 V
 - **Physical:** indoor/outdoor, IP/IK rating, dimensions, mounting (feeds "can I re-case it")
 - **Door fit:** controller channels (1/2/4 doors), lock type supported (strike/maglock/motor)
 - **Commercial:** unit price, MOQ, lead time, EU stock/distributor
 - **Rebrandability:** OEM program Y/N, logo-on-device, custom firmware/UI, who holds CE, `RebrandPath`
-- **Certification:** CE, EN 60839, RED, RoHS, DoC available
+- **Certification:** CE, EN 60839, **RED (Radio Equipment Directive — mandatory for any LTE/WiFi/BLE
+  radio)**, cellular module type approval, RoHS, DoC available. Note: a built-in radio makes
+  re-casing *more* regulated than a passive reader — reinforces the OEM-program path for cellular units.
 
 ### 4.3 Scoring rubric (`config/scoring_weights.yaml`)
 
@@ -220,10 +228,16 @@ Plus foundation commands inherited from arena-research-engine: `ping`, `paths`, 
 
 ## 6. Open inputs (to fill before/at implementation)
 
-- **`requirements.yaml`** — the user's hard requirements: which protocols (OSDP? REST? MQTT?),
-  credential types (which RFID frequencies/standards), indoor/outdoor, single vs multi-door,
-  budget per unit, acceptable MOQ, target volume. Until filled, ranking weights rebrandability +
-  spec completeness and treats requirements as soft.
+- **Hard criteria confirmed (2026-06-26):**
+  1. **LTE / 4G cellular connectivity — required** (hard filter; no-cellular devices are excluded).
+  2. **WiFi + Bluetooth — bonus** (scoring boost, not a filter).
+  3. **MQTT or equivalent ready API, no firmware coding — required** (`api_type` ∈ {native-mqtt,
+     rest-http} AND `programmability` ∈ {config-only, rules-engine}).
+- **ARCHITECTURE DECISION (open — see §8):** all-in-one 4G access *terminal* (reader+controller in
+  one rebrandable unit, e.g. CiVinTec CT-series) **vs** cellular IoT *controller* + separate reader +
+  lock (native-MQTT, true "own case", e.g. Milesight/King Pigeon) **vs** let the engine compare both.
+- **`requirements.yaml`** — remaining requirements: credential types (which RFID frequencies/standards),
+  indoor/outdoor, single vs multi-door, budget per unit, acceptable MOQ, target volume.
 - **Shortlist size confirmed:** ~top 10 per controller sub-segment (not one flat list).
 - **Searched category confirmed:** door controllers only; reader/lock support are controller criteria.
 - **Project location confirmed:** sibling folder `door-hardware-sourcing-engine`.
@@ -238,4 +252,46 @@ Plus foundation commands inherited from arena-research-engine: `ping`, `paths`, 
 3. **Crawl + extract** — vendor/distributor crawlers + LLM datasheet extraction + verification.
 4. **Score + compare** — scoring rubric + segmented shortlist generator + matrix output.
 5. **Always-on** — scheduler for periodic re-crawl; loop-until-dry discovery.
+
+---
+
+## 8. Initial landscape scouting (validated 2026-06-26)
+
+A manual web pass against the three hard criteria (LTE + WiFi/BLE bonus + MQTT/no-firmware). The
+key finding: **traditional access-control brands mostly fail these criteria** — they are LAN/PoE +
+Wiegand/OSDP and locked to their own management software. The matches cluster in two families, and
+this should be **validated by the engine**, not taken as final.
+
+### Family A — All-in-one 4G access terminals (finished, reader+controller in one unit)
+
+| Device | LTE | WiFi/BLE | API | No-firmware | Rebrand | Notes |
+|--------|-----|----------|-----|-------------|---------|-------|
+| **CiVinTec CT9 / CT9 Pro / CT9 E / CT10** | ✅ 4G | ✅ BLE+NFC (+WiFi on some) | HTTP/HTTPS + SDK (MQTT **unverified**) | ✅ config/SDK | ✅✅ explicit ODM: logo on screen + body, HW/FW/SW customization | IP65 outdoor, dual-freq RFID + QR, OSDP, 1–2 relays. CT10 adds GPS. **Branding = logo/faceplate, not a full re-case.** |
+| CellGate Entría (E4DC) | ✅ LTE or Ethernet | — | vendor cloud (TrueCloud) | ✅ | ❌ locked to CellGate platform | US, 1/4-door, works with 3rd-party readers. Not your-own-stack. |
+
+### Family B — Cellular IoT controllers / RTUs (native MQTT; you add a reader + lock)
+
+| Device | LTE | WiFi/BLE | API | No-firmware | Rebrand | Notes |
+|--------|-----|----------|-----|-------------|---------|-------|
+| **Milesight UC300 (Cellular)** | ✅ 3G/4G | — | **native MQTT** + TCP/UDP | ✅ 16-rule edge engine | OEM-ish | Relay out, RS-485 Modbus, runs rules offline. IP30 indoor. Strong native-MQTT fit. |
+| **King Pigeon (S2xx / S275)** | ✅ 4G | — | **MQTT** + Modbus | ✅ config | ✅ OEM/ODM to 100+ clients | 210+ RTU models, 4 relays, KPIIOT cloud or your broker. Classic OEM cellular RTU. |
+| Teracom TCG120-4 | ✅ 4G | — | MQTT + HTTP | ✅ config | OEM-ish | EU (Bulgaria) → CE-clean. 2 relays, generic I/O. |
+| ControlByWeb X-412CW | ✅ cellular | — | MQTT/Modbus/SNMP/REST | ✅ config | — | US. 4 relays. |
+| NORVI X (X1/X2/X3) | ✅ optional 4G | ✅ WiFi+BT5.0 | native MQTT/HTTP | ⚠️ Arduino-programmable | ✅ OEM-focused | $79–101, ESP32-S3, 200 I/O, TFT. **"No firmware" is shaky — you'd likely code access logic.** |
+| Allockate | ✅ LTE-M / Cat-1 | — | **TLS MQTT** | ✅ platform | OEM-ish | Purpose-built modular access HW: master + slave door I/O over Modbus, 8 relays, QR/keypad modules. Tied to Allockate platform. |
+
+### Contrast — traditional panels that FAIL the criteria
+
+- **Johnson Controls iSTAR Edge G2** — has an MQTT open-connectivity protocol + OSDP, but **Ethernet/PoE only → no LTE**; enterprise, not white-label.
+- **Kantech KT-4** — Ethernet + optional WiFi, **no cellular**, locked to EntraPass software.
+
+### Strategic implication
+
+The deliverable's sub-segmentation should likely be **Family A vs Family B** (plus the existing
+topology/door-count axes), because they represent two genuinely different sourcing strategies:
+
+- **A = "simply put up, finished"** but branding is limited to logo/faceplate and MQTT is often
+  actually HTTP-to-vendor-cloud.
+- **B = "put my own case around it" + true native MQTT on your own broker**, at the cost of
+  assembling controller + reader + lock and handling RED/radio approval on the re-case.
 ```

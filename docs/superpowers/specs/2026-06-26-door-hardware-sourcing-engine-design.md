@@ -240,6 +240,11 @@ Plus foundation commands inherited from arena-research-engine: `ping`, `paths`, 
 
 - **Hard criteria confirmed (2026-06-26):**
   1. **LTE / 4G cellular connectivity — required** (hard filter; no-cellular devices are excluded).
+     **LoRaWAN / NB-IoT-only does NOT qualify** — LoRaWAN needs its own gateway + network server and
+     its duty-cycle-limited *downlink* makes a real-time "open now" command slow/unreliable. Need
+     cellular that reaches the internet directly: LTE Cat-1/Cat-4 ideal, LTE-M acceptable for relay
+     command/control. ⚠️ Several products (incl. the Milesight UC300) ship in both a LoRaWAN and a
+     Cellular variant — **only the Cellular SKU qualifies** (UC300 → `UC300-L05EU`).
   2. **WiFi + Bluetooth — bonus** (scoring boost, not a filter).
   3. **MQTT or equivalent ready API, no firmware coding — required** (`api_type` ∈ {native-mqtt,
      rest-http} AND `programmability` ∈ {config-only, rules-engine}).
@@ -316,8 +321,14 @@ topology/door-count axes), because they represent two genuinely different sourci
 **Family B chosen.** The user already runs the access-control app (the brain), so the device is a
 cellular connected relay the app commands — not a self-contained terminal. Family A remains only as
 a benchmark/contrast. Reader interface (Wiegand/OSDP/RS-485) is a high-value plus, not a hard
-filter, per "eventually add RFID readers." Strongest seed candidates to validate first:
-**King Pigeon** (OEM cellular RTU, MQTT, 4 relays), **Milesight UC300 Cellular** (native MQTT,
-edge rules), **Teracom TCG120-4** (EU-made, CE-clean), with **Allockate** as the closest
-access-specific modular option.
+filter, per "eventually add RFID readers."
+
+**Reference benchmark (decided 2026-06-26): Milesight UC300 *Cellular* (`UC300-L05EU`).** It is the
+verified gold-standard example of what we want — documented driving its relay over MQTT to the
+user's own broker (no firmware), 2× SPDT relays + 4 digital inputs, EU SKU. New candidates are
+judged against it. (Use the Cellular variant only — the LoRaWAN UC300 does not qualify, see §6.)
+
+Other seed candidates to validate: **King Pigeon** (OEM cellular RTU, MQTT, 4 relays),
+**Teracom TCG120-4** (EU-made, CE-clean), **Teltonika** RUT/TRB (EU, RutOS MQTT — re-verify),
+**Allockate** (access-specific modular).
 ```

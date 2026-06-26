@@ -1,0 +1,6 @@
+weights:
+  rebrandability: 0.30
+  ready_to_install: 0.20
+  spec_fit: 0.25
+  ce_red: 0.15
+  commercial: 0.10

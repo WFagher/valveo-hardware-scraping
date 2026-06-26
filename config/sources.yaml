@@ -1,0 +1,16 @@
+tiers:
+  cellular_iot_controllers:
+    - Milesight
+    - King Pigeon
+    - Teracom
+    - ControlByWeb
+    - Robustel
+    - BLIIoT
+    - Teltonika
+  nordic_eu_incumbents:
+    - Aptus
+    - RCO
+    - Axema
+  marketplaces:
+    - alibaba.com
+    - made-in-china.com

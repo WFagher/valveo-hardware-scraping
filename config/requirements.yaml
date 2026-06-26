@@ -1,0 +1,15 @@
+# Hard criteria are filters; bonus items boost score only. Decided 2026-06-26.
+hard:
+  cellular: required          # LTE/4G; LoRaWAN / NB-IoT-only is EXCLUDED
+  api: [native_mqtt, rest_http]   # to the user's OWN broker; vendor_cloud_only EXCLUDED
+  programmability: [config_only, rules_engine]   # no firmware coding
+  relay_min: 1
+bonus:
+  wifi: backup_wan            # low priority
+  bluetooth: phone_key_via_reader   # met at reader layer, not controller
+  reader_interface: [wiegand, osdp, rs485]
+  door_io: [door_contact, rex, tamper]
+  oem_program: true
+  ce_red: true
+  ip65: true
+benchmark: "Milesight UC300-L05EU"

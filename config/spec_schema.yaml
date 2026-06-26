@@ -1,0 +1,12 @@
+# Informational mirror of engine/models.py::Controller (the real schema).
+fields:
+  - vendor
+  - model
+  - sku
+  - cellular
+  - api_type
+  - programmability
+  - lock.relay_count
+  - reader
+  - cert
+  - oem

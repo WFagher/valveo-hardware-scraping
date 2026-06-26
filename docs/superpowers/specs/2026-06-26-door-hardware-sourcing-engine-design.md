@@ -12,6 +12,15 @@
 A 24/7 local-LLM research engine that finds **finished, re-brandable access-control door
 hardware** and ranks the best alternatives for sourcing.
 
+**Device concept (decided 2026-06-26):** the user already operates the access-control
+*application* — the cloud brain that decides who / when / where may open a door. The hardware they
+need is therefore essentially a **cellular connected relay** (Swedish *"uppkopplat relä"*): an LTE
+edge node that receives an open/close command from the user's app over **MQTT or clean REST** and
+fires the lock relay — plus "additional functionality" (a reader interface to forward credentials
+to the app, and door I/O). The device does **not** need its own user database, local access logic,
+or a proprietary vendor cloud — those would duplicate or fight the user's app. This is decisively
+**Family B** in §8, not the all-in-one access terminals of Family A.
+
 The user wants to **buy a finished product and sell it as their own** — either via a vendor
 OEM/white-label program, or by putting their own enclosure around an otherwise-unmodified
 certified device — **without re-doing CE conformity assessment**. The engine therefore treats
@@ -54,11 +63,12 @@ separately searched categories.
 (standalone vs networked, single- vs multi-door, indoor vs outdoor) and unlike controllers
 shouldn't be forced into one list.
 
-- **Sub-segments within door controllers** (this is what gives multiple ~top-10 lists), e.g.:
-  - by topology: standalone vs networked / cloud-managed
-  - by door capacity: single-door vs multi-door (2 / 4+)
-  - by environment: indoor vs outdoor-rated
-  (final sub-segment axes confirmed once `requirements.yaml` is filled)
+- **Sub-segments within cellular connected relays** (this is what gives multiple ~top-10 lists):
+  - by reader interface: relay-only vs reader-capable (Wiegand / OSDP / RS-485)
+  - by door capacity: single-door (1–2 relays) vs multi-door (4+ relays)
+  - by environment: indoor (IP30) vs outdoor-rated (IP65)
+  - by rebrand tier: vendor OEM program vs re-case-friendly
+  (final axes confirmed once `requirements.yaml` is filled)
 - **Per sub-segment:** ranked **~top 10** (fewer if small), each finalist with
   **pros / cons + recommended rebrand path + CE note**, every claim cited to a source.
 - **Cross-cutting tags** on each finalist so the data can be sliced: rebrand path
@@ -233,9 +243,15 @@ Plus foundation commands inherited from arena-research-engine: `ping`, `paths`, 
   2. **WiFi + Bluetooth — bonus** (scoring boost, not a filter).
   3. **MQTT or equivalent ready API, no firmware coding — required** (`api_type` ∈ {native-mqtt,
      rest-http} AND `programmability` ∈ {config-only, rules-engine}).
-- **ARCHITECTURE DECISION (open — see §8):** all-in-one 4G access *terminal* (reader+controller in
-  one rebrandable unit, e.g. CiVinTec CT-series) **vs** cellular IoT *controller* + separate reader +
-  lock (native-MQTT, true "own case", e.g. Milesight/King Pigeon) **vs** let the engine compare both.
+  4. **Reader interface (Wiegand / OSDP / RS-485) to forward credentials to the app — high-value
+     plus / future-proofing**, not a hard filter ("eventually add RFID readers"). Door I/O (door
+     contact, REX, tamper) similarly weighted.
+- **ARCHITECTURE DECIDED (2026-06-26): Family B — cellular connected relay** (see §1 device concept
+  and §8). The engine targets LTE relay controllers that the user's own app commands; all-in-one
+  access terminals (Family A) are out of scope except as benchmark references.
+- **API rule (decided):** native MQTT **or** clean REST to the *user's own server* both qualify.
+  **Vendor-cloud-only devices are excluded** — if the maker's proprietary cloud is the only way in,
+  the user's app can't command it.
 - **`requirements.yaml`** — remaining requirements: credential types (which RFID frequencies/standards),
   indoor/outdoor, single vs multi-door, budget per unit, acceptable MOQ, target volume.
 - **Shortlist size confirmed:** ~top 10 per controller sub-segment (not one flat list).
@@ -294,4 +310,14 @@ topology/door-count axes), because they represent two genuinely different sourci
   actually HTTP-to-vendor-cloud.
 - **B = "put my own case around it" + true native MQTT on your own broker**, at the cost of
   assembling controller + reader + lock and handling RED/radio approval on the re-case.
+
+### Decision (2026-06-26)
+
+**Family B chosen.** The user already runs the access-control app (the brain), so the device is a
+cellular connected relay the app commands — not a self-contained terminal. Family A remains only as
+a benchmark/contrast. Reader interface (Wiegand/OSDP/RS-485) is a high-value plus, not a hard
+filter, per "eventually add RFID readers." Strongest seed candidates to validate first:
+**King Pigeon** (OEM cellular RTU, MQTT, 4 relays), **Milesight UC300 Cellular** (native MQTT,
+edge rules), **Teracom TCG120-4** (EU-made, CE-clean), with **Allockate** as the closest
+access-specific modular option.
 ```

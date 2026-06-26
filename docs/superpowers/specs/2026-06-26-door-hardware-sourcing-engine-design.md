@@ -245,7 +245,12 @@ Plus foundation commands inherited from arena-research-engine: `ping`, `paths`, 
      cellular that reaches the internet directly: LTE Cat-1/Cat-4 ideal, LTE-M acceptable for relay
      command/control. ⚠️ Several products (incl. the Milesight UC300) ship in both a LoRaWAN and a
      Cellular variant — **only the Cellular SKU qualifies** (UC300 → `UC300-L05EU`).
-  2. **WiFi + Bluetooth — bonus** (scoring boost, not a filter).
+  2. **WiFi + Bluetooth — bonus** (scoring boost, not a filter). *Clarified 2026-06-26:* WiFi =
+     low-priority **backup WAN** only (some customers want it). **Bluetooth phone-as-key is wanted
+     but met at the READER layer** — a BLE reader talks to the phone locally and forwards the
+     credential to the controller — so it does **not** require BLE in the controller. Key benefit:
+     the phone unlocks even with **no phone signal** (e.g. underground garage), as long as the
+     *controller* itself is connected (cellular or, for WiFi sites, a WiFi-capable controller).
   3. **MQTT or equivalent ready API, no firmware coding — required** (`api_type` ∈ {native-mqtt,
      rest-http} AND `programmability` ∈ {config-only, rules-engine}).
   4. **Reader interface (Wiegand / OSDP / RS-485) to forward credentials to the app — high-value

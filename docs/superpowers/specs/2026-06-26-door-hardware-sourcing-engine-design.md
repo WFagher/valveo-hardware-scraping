@@ -30,8 +30,10 @@ two dimensions as first-class that a generic spec comparison would miss:
 
 ### Scope (in)
 
-- **Device categories:** door controllers/panels, RFID/NFC/BLE readers (incl. embeddable OEM
-  reader modules), electric locks/strikes, and all-in-one access kits.
+- **Searched category:** door controllers / access panels **only**. **Reader support
+  (RFID/NFC/BLE) and electric-lock/strike compatibility are spec criteria of the controller, not
+  separately searched categories.** A controller sold as a complete kit (bundled reader/lock) is
+  still evaluated as a controller, tagged `bundled-kit`.
 - **Geography:** Nordic/EU-first, then global (incl. Chinese ODMs that offer OEM programs).
 
 ### Scope (out, for now)
@@ -44,21 +46,26 @@ two dimensions as first-class that a generic spec comparison would miss:
 
 ## 2. Deliverable
 
-**Segmented shortlists** rather than one flat ranking, because controllers, readers, and locks
-are not comparable on one axis and each alternative has unique pros/cons.
+The engine researches **one category: door controllers / access panels.** Reader support
+(RFID/NFC) and electric-lock/strike compatibility are **criteria of each controller**, not
+separately searched categories.
 
-- **Primary segments (by category):**
-  1. Door controllers / panels (standalone + networked)
-  2. RFID/NFC readers (incl. embeddable OEM reader modules)
-  3. Electric locks / strikes
-  4. All-in-one access kits ("simply put up")
-- **Per segment:** ranked **~top 10** (fewer if the segment is small), each finalist with
+**Segmented shortlists** of controllers rather than one flat ranking — controllers vary widely
+(standalone vs networked, single- vs multi-door, indoor vs outdoor) and unlike controllers
+shouldn't be forced into one list.
+
+- **Sub-segments within door controllers** (this is what gives multiple ~top-10 lists), e.g.:
+  - by topology: standalone vs networked / cloud-managed
+  - by door capacity: single-door vs multi-door (2 / 4+)
+  - by environment: indoor vs outdoor-rated
+  (final sub-segment axes confirmed once `requirements.yaml` is filled)
+- **Per sub-segment:** ranked **~top 10** (fewer if small), each finalist with
   **pros / cons + recommended rebrand path + CE note**, every claim cited to a source.
-- **Cross-cutting tags** on each finalist so the user can slice the data: rebrand path
-  (`oem_program` / `recase_diy` / `resell_as_is` / `none`), use-case (indoor/outdoor,
-  single-door/multi-door), country of origin, EU stock availability.
-- Backed by a **full normalized spec matrix** over *every* device found (the structured dataset),
-  from which the shortlists are derived.
+- **Cross-cutting tags** on each finalist so the data can be sliced: rebrand path
+  (`oem_program` / `recase_diy` / `resell_as_is` / `none`), reader/credential support, lock
+  compatibility, country of origin, EU stock availability.
+- Backed by a **full normalized spec matrix** over *every* controller found (the structured
+  dataset), from which the shortlists are derived.
 
 ---
 
@@ -83,7 +90,7 @@ door-hardware-sourcing-engine/
 │   ├── llm/                # Ollama client + RAG  (reused)
 │   ├── indexer/            # vector store for retrieval over scraped catalogs (reused)
 │   ├── health/             # thermal gate (reused)
-│   ├── models.py           # Device, Reader, Controller, Lock, OEMProgram, Certification (pydantic)
+│   ├── models.py           # Controller, ReaderSupport, LockSupport, OEMProgram, Certification (pydantic)
 │   ├── crawlers/           # vendor_catalog, distributor (Alibaba/Made-in-China),
 │   │                       #   datasheet_pdf, reader_module, ce_doc
 │   ├── extractors/         # LLM spec-extraction: datasheet → normalized Device record
@@ -101,19 +108,21 @@ door-hardware-sourcing-engine/
 
 ### Data model (`models.py`)
 
-A normalized `Device` record with `category` (controller/reader/lock/kit), full spec fields
-(section 4.2), plus two purpose-specific blocks:
+A normalized `Controller` record (the only searched category) with full spec fields
+(section 4.2). Reader and lock support are embedded as controller criteria
+(`ReaderSupport`, `LockSupport`), plus two purpose-specific blocks:
 
 - `OEMProgram` — white-label offered? logo-on-product? custom firmware/UI branding? MOQ? who
   holds CE?
 - `Certification` — CE / EN 60839 / RED / RoHS, Declaration of Conformity (DoC) available?
 
-Every device carries a `RebrandPath` enum: `oem_program | recase_diy | resell_as_is | none`.
+Every controller carries a `RebrandPath` enum: `oem_program | recase_diy | resell_as_is | none`,
+and a `bundled-kit` tag if it ships with reader/lock included.
 
 ### Pipeline
 
 `crawl → extract (LLM datasheet → structured record) → dedup/normalize → score → rank → report`.
-Mirrors the existing `crawler → Signal → drafter` flow; "Signal" becomes "Device record" and
+Mirrors the existing `crawler → Signal → drafter` flow; "Signal" becomes "Controller record" and
 "drafter" becomes "comparison/shortlist generator."
 
 ### Approaches considered
@@ -137,13 +146,14 @@ Chosen: **#1**, with RAG (#2) layered on top for ad-hoc questions.
 |------|----------|-----|
 | Nordic/EU incumbents | ASSA ABLOY, Aptus, RCO, Axema, Salto, Gantner, Nedap, 2N, Axis (A16 controllers + readers) | Already CE-marked, EU-legal; some have OEM lines |
 | Global OEM/ODM (white-label friendly) | ZKTeco, Suprema, Hikvision, Dahua, Granding, Sebury + Shenzhen ODMs | Core of the "rebrand it" path — many explicitly offer private label |
-| Reader modules (embed-in-your-own-case) | HID Global OEM cores, Elatec TWN4, STid, Identiv, RFIDeas | Designed to be built into your enclosure — the user's exact use case, lowest CE risk |
+| Reader/credential reference | HID, Elatec, STid; MIFARE/DESFire, OSDP standards | Reference only — to judge *which readers/credentials a controller supports* (a controller criterion, not a search target) |
 | Marketplaces / distributors | Alibaba, Made-in-China, Global Sources, EU distributors | MOQ, pricing, OEM terms, EU stock with existing CE |
 | Certification / DoC sources | EU DoC PDFs, EN 60839-11-1, RED/CE references | Verify who holds CE and whether rebranding is offered |
 
 ### 4.2 Canonical spec schema (`config/spec_schema.yaml`)
 
-Every device normalized to comparable fields:
+Every **controller** normalized to comparable fields. Reader and lock support appear here as
+controller *criteria* (which credentials/readers it accepts, which locks it can drive):
 
 - **Identity:** vendor, model, category, country of origin, year
 - **Credentials/RFID:** 125 kHz / 13.56 MHz (MIFARE Classic/DESFire), NFC, BLE/mobile, PIN, biometric
@@ -181,15 +191,15 @@ Each device scored 1–10 on each axis, then weighted:
 ### 4.5 Convergence to the shortlists
 
 - Run discovery until **N consecutive crawl rounds surface no new vendors** (loop-until-dry).
-- Build the full matrix → filter to devices meeting hard requirements → rank by weighted score
-  within each segment → take **~top 10 per segment** → LLM writes **pros/cons + recommended
-  rebrand path** per finalist, each claim cited.
+- Build the full matrix → filter to controllers meeting hard requirements → rank by weighted
+  score within each controller sub-segment → take **~top 10 per sub-segment** → LLM writes
+  **pros/cons + recommended rebrand path** per finalist, each claim cited.
 
 ### Seed leads (known starting points)
 
-- **Readers (lowest CE risk for "own case"):** Elatec TWN4, HID OEM reader cores — explicitly
-  built to be embedded in your own housing without re-certifying the radio.
-- **Controllers (white-label-friendly finished units):** ZKTeco, Suprema, Axis A16.
+- **White-label-friendly finished controllers:** ZKTeco (inBio / C3), Suprema CoreStation,
+  Axis A16, Hikvision / Dahua access controllers, Shenzhen ODM access panels.
+- **EU incumbents to benchmark against:** Aptus, RCO, Axema, Nedap, Gantner.
 
 ---
 
@@ -198,8 +208,8 @@ Each device scored 1–10 on each axis, then weighted:
 ```bash
 engine discover                 # crawl all configured sources → populate device DB
 engine extract <url|pdf>        # one-off: pull a datasheet into a structured record
-engine matrix --category reader # full side-by-side spec matrix for a category
-engine shortlist --top 10       # segmented ranked shortlists + pros/cons (the deliverable)
+engine matrix                   # full side-by-side spec matrix of all controllers
+engine shortlist --top 10       # ranked controller shortlists per sub-segment (the deliverable)
 engine device <id>              # deep-dive on one device
 engine scheduler                # periodic re-crawl to catch new models / price changes
 ```
@@ -214,7 +224,8 @@ Plus foundation commands inherited from arena-research-engine: `ping`, `paths`, 
   credential types (which RFID frequencies/standards), indoor/outdoor, single vs multi-door,
   budget per unit, acceptable MOQ, target volume. Until filled, ranking weights rebrandability +
   spec completeness and treats requirements as soft.
-- **Shortlist size confirmed:** ~top 10 per segment (not one flat list).
+- **Shortlist size confirmed:** ~top 10 per controller sub-segment (not one flat list).
+- **Searched category confirmed:** door controllers only; reader/lock support are controller criteria.
 - **Project location confirmed:** sibling folder `door-hardware-sourcing-engine`.
 
 ---

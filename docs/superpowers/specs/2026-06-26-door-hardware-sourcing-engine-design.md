@@ -77,6 +77,29 @@ shouldn't be forced into one list.
 - Backed by a **full normalized spec matrix** over *every* controller found (the structured
   dataset), from which the shortlists are derived.
 
+### 2.1 Per-device deep-dive report (the engine's signature output)
+
+For each shortlisted device the engine must generate a **deep-dive that mirrors the depth of a human
+sourcing dialog** (modelled on the live analysis of the Milesight UC300 in this project — see
+`reports/2026-06-26-connected-relay-shortlist.md` and the UC300 conversation). Each deep-dive has:
+
+1. **Snapshot** — vendor, model, **exact SKU + a variant/radio decode warning** (e.g. UC300: `-868M`
+   = LoRaWAN ❌ vs `-L0xx` = cellular ✅), country of origin, indicative price + **live buy links**,
+   stock.
+2. **Criteria-fit table** — each hard requirement ✓/✗ and each bonus, **with the verified evidence
+   and source per row**; unconfirmed specs explicitly flagged "verify before sourcing."
+3. **Real-world scenarios** — 3–5 escalating scenarios showing how to *maximise the device's
+   capabilities* for the door use-case (like Scenario 1–4 for the UC300: supervised door → reader
+   integration → offline safety rules → multi-purpose node).
+4. **Limitations** — honest, severity-tagged (🔴 real constraint / 🟡 manageable).
+5. **Mitigations** — a concrete solution for each limitation.
+6. **Rebrand path + CE/RED note** — vendor OEM program vs DIY re-case, and the radio/RED implication.
+7. **Verdict** — where it fits, and any dealbreakers.
+
+Every factual claim is **cited**; uncertain specs are flagged rather than asserted (same discipline as
+the deep-research verification pass). This deep-dive — not just a spec row — is the unit of value the
+engine produces per device.
+
 ---
 
 ## 3. Architecture

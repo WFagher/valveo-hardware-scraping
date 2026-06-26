@@ -1,0 +1,5 @@
+.venv/
+data/*.sqlite3
+__pycache__/
+.env
+reports/

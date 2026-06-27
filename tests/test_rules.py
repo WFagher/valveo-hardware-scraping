@@ -65,3 +65,13 @@ def test_score_in_range_and_rewards_quality():
     bare = Controller(vendor="X", model="Y")
     assert 0.0 <= score_controller(bare, WEIGHTS) <= 1.0
     assert score_controller(_good(), WEIGHTS) > score_controller(bare, WEIGHTS)
+
+
+def test_unknown_data_scored_neutral_not_worst():
+    # a device with unresearched rebrand/cert should beat one CONFIRMED to have no path / no certs
+    from engine.models import Certification
+
+    unknown = Controller(vendor="U", model="M")  # rebrand_path defaults to unknown, cert None
+    confirmed_bad = Controller(vendor="B", model="M", rebrand_path=RebrandPath.none)
+    confirmed_bad.cert = Certification(ce=False, red=False)
+    assert score_controller(unknown, WEIGHTS) > score_controller(confirmed_bad, WEIGHTS)

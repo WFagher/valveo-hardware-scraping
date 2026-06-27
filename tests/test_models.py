@@ -8,7 +8,7 @@ def test_controller_defaults_and_key():
     assert c.key == "milesight::uc300-l05eu"
     assert c.api_type is ApiType.unknown
     assert c.programmability is Programmability.unknown
-    assert c.rebrand_path is RebrandPath.none
+    assert c.rebrand_path is RebrandPath.unknown
     assert c.wifi is False and c.bluetooth is False
     assert c.reader.rs485 is False
     assert c.buy_links == []

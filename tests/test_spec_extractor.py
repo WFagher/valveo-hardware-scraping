@@ -69,6 +69,21 @@ def test_extract_coerces_optionlist_enum():
     assert c.programmability.value == "config_only"
 
 
+def test_infer_own_broker_from_open_api():
+    resp = json.dumps({"vendor": "V", "model": "M", "api_type": "native_mqtt"})
+    c = extract_controller("t", ollama=FakeOllama(resp), model="m")
+    assert c is not None and c.own_broker is True
+
+
+def test_drops_junk_sku():
+    resp = json.dumps(
+        {"vendor": "Milesight", "model": "UC300",
+         "sku": "Show prices incl. VAT 225,98 € excl. VAT 189,90 €"}
+    )
+    c = extract_controller("t", ollama=FakeOllama(resp), model="m")
+    assert c is not None and c.sku is None
+
+
 def test_infer_api_type_from_protocols():
     resp = json.dumps(
         {"vendor": "Milesight", "model": "UC300", "api_type": "unknown",

@@ -25,7 +25,8 @@ _REBRAND = {
     RebrandPath.oem_program: 1.0,
     RebrandPath.resell_as_is: 0.7,
     RebrandPath.recase_diy: 0.4,
-    RebrandPath.none: 0.1,
+    RebrandPath.unknown: 0.5,  # not yet researched — neutral, don't punish absence of data
+    RebrandPath.none: 0.1,  # confirmed no rebrand path
 }
 _READY = {
     Programmability.config_only: 1.0,
@@ -45,7 +46,11 @@ def _spec_fit(c: Controller) -> float:
 def _ce_red(c: Controller) -> float:
     if c.cert.ce and c.cert.red:
         return 1.0
-    return 0.6 if c.cert.ce else 0.0
+    if c.cert.ce:
+        return 0.6
+    if c.cert.ce is None and c.cert.red is None:
+        return 0.5  # unknown — not yet researched, don't punish as confirmed-missing
+    return 0.0
 
 
 def _commercial(c: Controller) -> float:

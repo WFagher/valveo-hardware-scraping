@@ -15,6 +15,7 @@ class RebrandPath(str, Enum):
     recase_diy = "recase_diy"
     resell_as_is = "resell_as_is"
     none = "none"
+    unknown = "unknown"
 
 
 class ApiType(str, Enum):
@@ -102,7 +103,7 @@ class Controller(BaseModel):
     buy_links: list[str] = Field(default_factory=list)
 
     # rebrand / certification
-    rebrand_path: RebrandPath = RebrandPath.none
+    rebrand_path: RebrandPath = RebrandPath.unknown
     oem: OEMProgram = Field(default_factory=OEMProgram)
     cert: Certification = Field(default_factory=Certification)
 

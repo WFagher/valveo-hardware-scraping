@@ -19,7 +19,8 @@ _SYSTEM = (
 )
 
 _KEYS = (
-    "vendor, model, sku, country_of_origin, cellular (bool), cellular_tech, wifi (bool), "
+    "vendor, model, sku (exact model/part number e.g. UC300-L05EU — NOT price or marketing text), "
+    "country_of_origin, cellular (bool), cellular_tech, wifi (bool), "
     "bluetooth (bool), ethernet (bool), "
     "api_type (choose ONE of native_mqtt, rest_http, vendor_cloud_only, unknown), "
     "protocols (list of strings), "
@@ -114,6 +115,15 @@ def extract_controller(
             data["api_type"] = "native_mqtt"
         elif "rest" in protos or "http api" in protos:
             data["api_type"] = "rest_http"
+    # An open protocol implies the buyer can point it at their own broker/server.
+    if data.get("own_broker") is None and data.get("api_type") in ("native_mqtt", "rest_http"):
+        data["own_broker"] = True
+    # Drop junk SKUs (the model sometimes grabs price/marketing text).
+    sku = data.get("sku")
+    if isinstance(sku, str) and (
+        len(sku) > 40 or any(t in sku.lower() for t in ("vat", "€", "eur ", "price", "incl.", "excl."))
+    ):
+        data["sku"] = None
     if source_url:
         sources = data.get("sources") or []
         if source_url not in sources:

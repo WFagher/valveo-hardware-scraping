@@ -13,6 +13,7 @@ from .crawlers.fetcher import fetch_text
 from .drafters.deep_dive import generate_deep_dive
 from .extractors.spec_extractor import extract_controller
 from .llm.ollama_client import OllamaClient
+from .pipeline import run_discovery_cycle
 from .research_config import load_requirements, load_scoring
 from .store import DeviceStore
 
@@ -95,28 +96,16 @@ def extract(target: str) -> None:
 @main.command()
 def discover() -> None:
     """Extract controllers from every URL in config/seed_urls.yaml."""
-    import yaml
-
     cfg = Config.load()
-    urls = yaml.safe_load((cfg.config_dir / "seed_urls.yaml").read_text())["urls"]
-    store = DeviceStore(cfg.db_path())
-    stored = 0
-    try:
-        with OllamaClient(cfg.ollama_host) as ol:
-            for url in urls:
-                text = fetch_text(url)
-                controller = extract_controller(
-                    text, ollama=ol, model=cfg.chat_model, source_url=url
-                )
-                if controller is not None:
-                    store.upsert(controller)
-                    stored += 1
-                    console.print(f"  [green]+[/green] {controller.vendor} {controller.model}")
-                else:
-                    console.print(f"  [yellow]-[/yellow] {url}")
-    finally:
-        store.close()
-    console.print(f"Discovered {stored}/{len(urls)} controllers.")
+
+    def _print(url: str, controller) -> None:
+        if controller is not None:
+            console.print(f"  [green]+[/green] {controller.vendor} {controller.model}")
+        else:
+            console.print(f"  [yellow]-[/yellow] {url}")
+
+    stored, total = run_discovery_cycle(cfg, on_result=_print)
+    console.print(f"Discovered {stored}/{total} controllers.")
 
 
 @main.command()
@@ -194,6 +183,14 @@ def deep_dive(key: str, to_stdout: bool) -> None:
     out = reports / f"{safe}.md"
     out.write_text(md)
     console.print(f"[green]Wrote[/green] {out}")
+
+
+@main.command()
+def scheduler() -> None:
+    """Start the always-on scheduler (daily discovery re-crawl)."""
+    from .scheduler import start
+
+    start()
 
 
 if __name__ == "__main__":

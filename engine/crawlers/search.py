@@ -27,7 +27,8 @@ def web_search(query: str, *, max_results: int = 5, client: httpx.Client | None 
         timeout=30.0, follow_redirects=True, headers={"User-Agent": _UA}
     )
     try:
-        resp = client.get("https://html.duckduckgo.com/html/", params={"q": query})
+        # DuckDuckGo's HTML endpoint answers POST (GET returns a 202 challenge).
+        resp = client.post("https://html.duckduckgo.com/html/", data={"q": query})
         resp.raise_for_status()
         urls: list[str] = []
         for href in _LINK.findall(resp.text):

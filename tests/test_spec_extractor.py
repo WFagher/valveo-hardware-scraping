@@ -69,6 +69,28 @@ def test_extract_coerces_optionlist_enum():
     assert c.programmability.value == "config_only"
 
 
+def test_infer_api_type_from_protocols():
+    resp = json.dumps(
+        {"vendor": "Milesight", "model": "UC300", "api_type": "unknown",
+         "protocols": ["TCP", "UDP", "MQTT", "SMS"]}
+    )
+    c = extract_controller("t", ollama=FakeOllama(resp), model="m")
+    assert c is not None and c.api_type.value == "native_mqtt"
+
+
+def test_extract_salvages_bad_field():
+    # one malformed field must not discard the whole device
+    resp = json.dumps(
+        {"vendor": "Milesight", "model": "UC300", "cellular": True,
+         "digital_inputs": "not a number", "lock": {"relay_count": "bad"}}
+    )
+    c = extract_controller("t", ollama=FakeOllama(resp), model="m")
+    assert c is not None
+    assert c.vendor == "Milesight" and c.cellular is True
+    assert c.digital_inputs is None          # bad field dropped
+    assert c.lock.relay_count is None        # bad nested field dropped
+
+
 def test_extract_truncates_long_text():
     captured = {}
 

@@ -1,4 +1,6 @@
 urls:
-  - https://www.milesight.com/iot/product/iot-controller/uc300
+  # Specific PRODUCT pages (not category pages) with visible spec tables.
+  - https://kiloelectronics.com/en/produkt/milesight-uc300-l05eu-4g-lte-iot-controller/
   - https://www.teracomsystems.com/cellular/4g-lte-wireless-io-module-tcg120-4/
-  - https://controlbyweb.com/cellular/
+  - https://controlbyweb.com/x412/
+  - https://www.iot-solution.com/wireless-remote-switch-p00207p1.html

@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 import re
 
+from pydantic import ValidationError
+
 from ..llm.ollama_client import ChatMessage
 from ..models import ApiType, Controller, Programmability
 
@@ -30,7 +32,7 @@ _KEYS = (
 
 
 # Cap source text so a noisy page doesn't blow up prompt-processing time on a local model.
-_MAX_CHARS = 16000
+_MAX_CHARS = 24000
 
 
 def build_messages(text: str) -> list[ChatMessage]:
@@ -39,6 +41,31 @@ def build_messages(text: str) -> list[ChatMessage]:
         f"TEXT:\n{text[:_MAX_CHARS]}"
     )
     return [ChatMessage("system", _SYSTEM), ChatMessage("user", user)]
+
+
+def _validate_salvage(data: dict) -> Controller | None:
+    """Validate into a Controller, dropping individual fields that fail rather
+    than discarding the whole (otherwise-good) record. Bounded retries."""
+    for _ in range(8):
+        try:
+            return Controller.model_validate(data)
+        except ValidationError as exc:
+            removed = False
+            for err in exc.errors():
+                loc = err["loc"]
+                if not loc:
+                    continue
+                top = loc[0]
+                if len(loc) >= 2 and isinstance(data.get(top), dict):
+                    if loc[1] in data[top]:
+                        data[top].pop(loc[1], None)
+                        removed = True
+                elif top in data:
+                    data.pop(top, None)
+                    removed = True
+            if not removed:
+                return None
+    return None
 
 
 def _coerce_enum(value: object, valid: set[str], default: str) -> str:
@@ -80,12 +107,16 @@ def extract_controller(
         data["api_type"] = _coerce_enum(data["api_type"], _VALID_API, "unknown")
     if "programmability" in data:
         data["programmability"] = _coerce_enum(data["programmability"], _VALID_PROG, "unknown")
+    # Infer api_type from the protocols list when the model left it unknown.
+    if data.get("api_type", "unknown") == "unknown":
+        protos = " ".join(str(p) for p in (data.get("protocols") or [])).lower()
+        if "mqtt" in protos:
+            data["api_type"] = "native_mqtt"
+        elif "rest" in protos or "http api" in protos:
+            data["api_type"] = "rest_http"
     if source_url:
         sources = data.get("sources") or []
         if source_url not in sources:
             sources.append(source_url)
         data["sources"] = sources
-    try:
-        return Controller.model_validate(data)
-    except Exception:
-        return None
+    return _validate_salvage(data)

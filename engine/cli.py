@@ -10,6 +10,7 @@ from rich.table import Table
 from .compare.shortlist import build_shortlist
 from .config import Config
 from .crawlers.fetcher import fetch_text
+from .drafters.deep_dive import generate_deep_dive
 from .extractors.spec_extractor import extract_controller
 from .llm.ollama_client import OllamaClient
 from .research_config import load_requirements, load_scoring
@@ -165,6 +166,34 @@ def shortlist(top: int) -> None:
                 f"  {i}. {s.controller.vendor} {s.controller.model} "
                 f"— {s.score * 10:.1f}/10  {tags}"
             )
+
+
+@main.command(name="deep-dive")
+@click.argument("key")
+@click.option("--stdout", "to_stdout", is_flag=True, help="Print instead of writing a file.")
+def deep_dive(key: str, to_stdout: bool) -> None:
+    """Generate the per-device deep-dive report for a controller KEY."""
+    cfg = Config.load()
+    store = DeviceStore(cfg.db_path())
+    try:
+        controller = store.get(key)
+    finally:
+        store.close()
+    if controller is None:
+        console.print(f"[yellow]Controller not found:[/yellow] {key}")
+        return
+    req = load_requirements(cfg.config_dir)
+    with OllamaClient(cfg.ollama_host) as ol:
+        md = generate_deep_dive(controller, req, ollama=ol, model=cfg.chat_model)
+    if to_stdout:
+        console.print(md)
+        return
+    reports = cfg.data_dir.parent / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
+    safe = key.replace("::", "__").replace("/", "_")
+    out = reports / f"{safe}.md"
+    out.write_text(md)
+    console.print(f"[green]Wrote[/green] {out}")
 
 
 if __name__ == "__main__":

@@ -7,11 +7,12 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from .compare.shortlist import build_shortlist
 from .config import Config
 from .crawlers.fetcher import fetch_text
 from .extractors.spec_extractor import extract_controller
 from .llm.ollama_client import OllamaClient
-from .research_config import load_requirements
+from .research_config import load_requirements, load_scoring
 from .store import DeviceStore
 
 console = Console()
@@ -115,6 +116,55 @@ def discover() -> None:
     finally:
         store.close()
     console.print(f"Discovered {stored}/{len(urls)} controllers.")
+
+
+@main.command()
+def matrix() -> None:
+    """Print a spec matrix of every stored controller."""
+    cfg = Config.load()
+    store = DeviceStore(cfg.db_path())
+    try:
+        controllers = store.all()
+    finally:
+        store.close()
+    table = Table()
+    for col in ("Vendor", "Model", "Cellular", "API", "Relays", "WiFi", "BLE"):
+        table.add_column(col)
+    for c in controllers:
+        table.add_row(
+            c.vendor, c.model, str(c.cellular), c.api_type.value,
+            str(c.lock.relay_count), str(c.wifi), str(c.bluetooth),
+        )
+    console.print(table)
+
+
+@main.command()
+@click.option("--top", default=10, help="Max items per segment.")
+def shortlist(top: int) -> None:
+    """Ranked shortlist, grouped by reader-capable vs relay-only."""
+    cfg = Config.load()
+    req = load_requirements(cfg.config_dir)
+    weights = load_scoring(cfg.config_dir)["weights"]
+    store = DeviceStore(cfg.db_path())
+    try:
+        controllers = store.all()
+    finally:
+        store.close()
+    ranked = build_shortlist(controllers, req, weights)
+    if not ranked:
+        console.print("[yellow]No controllers pass the hard criteria yet.[/yellow]")
+        return
+    for seg in ("reader-capable", "relay-only"):
+        items = [s for s in ranked if s.segment == seg][:top]
+        if not items:
+            continue
+        console.print(f"[bold]{seg}[/bold]")
+        for i, s in enumerate(items, 1):
+            tags = " ".join(s.tags)
+            console.print(
+                f"  {i}. {s.controller.vendor} {s.controller.model} "
+                f"— {s.score * 10:.1f}/10  {tags}"
+            )
 
 
 if __name__ == "__main__":

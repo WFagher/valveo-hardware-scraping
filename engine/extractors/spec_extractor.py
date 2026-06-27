@@ -23,10 +23,14 @@ _KEYS = (
 )
 
 
+# Cap source text so a noisy page doesn't blow up prompt-processing time on a local model.
+_MAX_CHARS = 16000
+
+
 def build_messages(text: str) -> list[ChatMessage]:
     user = (
         f"Extract the controller spec. Return JSON with these keys (null if unknown):\n{_KEYS}\n\n"
-        f"TEXT:\n{text}"
+        f"TEXT:\n{text[:_MAX_CHARS]}"
     )
     return [ChatMessage("system", _SYSTEM), ChatMessage("user", user)]
 

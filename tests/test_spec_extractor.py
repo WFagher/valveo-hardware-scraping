@@ -55,3 +55,15 @@ def test_extract_missing_vendor_returns_none():
 
 def test_extract_bad_json_returns_none():
     assert extract_controller("t", ollama=FakeOllama("not json"), model="m") is None
+
+
+def test_extract_truncates_long_text():
+    captured = {}
+
+    class Capturing:
+        def chat(self, model, messages, **kw):
+            captured["len"] = len(messages[-1].content)
+            return json.dumps({"vendor": "V", "model": "M"})
+
+    extract_controller("x" * 50000, ollama=Capturing(), model="m")
+    assert captured["len"] < 50000  # the page was truncated before prompting

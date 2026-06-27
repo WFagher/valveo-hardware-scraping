@@ -17,7 +17,7 @@ class OllamaClient:
         self,
         host: str = "http://localhost:11434",
         *,
-        timeout: float = 120.0,
+        timeout: float = 600.0,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self._client = httpx.Client(

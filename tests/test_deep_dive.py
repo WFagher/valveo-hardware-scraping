@@ -57,10 +57,18 @@ def test_variant_warning_uc300():
 
 
 def test_criteria_fit_rows_mark_hard_met():
-    rows = {label: met for label, met, _ in criteria_fit_rows(_uc300(), REQ)}
-    assert rows["LTE / 4G cellular (required)"] is True
-    assert rows["No firmware / config-only (required)"] is True
-    assert rows["Relay output (required)"] is True
+    rows = {label: status for label, status, _ in criteria_fit_rows(_uc300(), REQ)}
+    assert rows["LTE / 4G cellular (required)"] == "yes"
+    assert rows["No firmware / config-only (required)"] == "yes"
+    assert rows["Relay output (required)"] == "yes"
+
+
+def test_unconfirmed_bonus_is_unknown_not_no():
+    # a controller with no extracted CE/WiFi data shows ❓ (unknown), never ❌
+    bare = Controller(vendor="V", model="M", cellular=True)
+    rows = {label: status for label, status, _ in criteria_fit_rows(bare, REQ)}
+    assert rows["CE + RED (bonus)"] == "unknown"
+    assert rows["WiFi (bonus)"] == "unknown"
 
 
 def test_generate_analysis_parses_json():

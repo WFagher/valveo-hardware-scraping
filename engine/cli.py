@@ -11,6 +11,7 @@ from .compare.shortlist import build_shortlist
 from .config import Config
 from .crawlers.fetcher import fetch_text
 from .drafters.deep_dive import generate_deep_dive
+from .enrich import enrich_controller
 from .extractors.spec_extractor import extract_controller
 from .llm.ollama_client import OllamaClient
 from .pipeline import run_discovery_cycle
@@ -183,6 +184,31 @@ def deep_dive(key: str, to_stdout: bool) -> None:
     out = reports / f"{safe}.md"
     out.write_text(md)
     console.print(f"[green]Wrote[/green] {out}")
+
+
+@main.command()
+@click.argument("key", required=False)
+def enrich(key: str | None) -> None:
+    """Enrich one controller (or all) with OEM/CE/origin/rebrand via web search."""
+    cfg = Config.load()
+    store = DeviceStore(cfg.db_path())
+    try:
+        targets = [store.get(key)] if key else store.all()
+        targets = [t for t in targets if t is not None]
+        if not targets:
+            console.print("[yellow]Nothing to enrich.[/yellow]")
+            return
+        with OllamaClient(cfg.ollama_host) as ol:
+            for c in targets:
+                enriched = enrich_controller(c, ollama=ol, model=cfg.chat_model)
+                store.upsert(enriched)
+                console.print(
+                    f"  {enriched.vendor} {enriched.model}: "
+                    f"origin={enriched.country_of_origin} ce={enriched.cert.ce} "
+                    f"oem={enriched.oem.offered} rebrand={enriched.rebrand_path.value}"
+                )
+    finally:
+        store.close()
 
 
 @main.command()

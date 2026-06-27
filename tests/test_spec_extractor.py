@@ -57,6 +57,18 @@ def test_extract_bad_json_returns_none():
     assert extract_controller("t", ollama=FakeOllama("not json"), model="m") is None
 
 
+def test_extract_coerces_optionlist_enum():
+    # the model sometimes echoes the option list instead of picking one
+    resp = json.dumps(
+        {"vendor": "Teracom", "model": "TCG120-4", "api_type": "native_mqtt|rest_http",
+         "programmability": "config_only|rules_engine"}
+    )
+    c = extract_controller("t", ollama=FakeOllama(resp), model="m")
+    assert c is not None
+    assert c.api_type.value == "native_mqtt"
+    assert c.programmability.value == "config_only"
+
+
 def test_extract_truncates_long_text():
     captured = {}
 

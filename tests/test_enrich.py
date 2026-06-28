@@ -68,6 +68,18 @@ def test_enrich_skips_irrelevant_pages():
     assert out == c
 
 
+def test_oem_offered_implies_oem_program_rebrand():
+    c = Controller(vendor="BLIIoT", model="RTU5022")
+    resp = json.dumps({"oem_offered": True})
+    out = enrich_controller(
+        c, ollama=FakeOllama(resp), model="m",
+        searcher=lambda q, **k: ["https://bliiot.com/rtu5022"],
+        fetch=lambda u, **k: "BLIIoT RTU5022 — OEM and ODM services available.",
+    )
+    assert out.oem.offered is True
+    assert out.rebrand_path is RebrandPath.oem_program
+
+
 def test_enrich_no_results_returns_unchanged():
     c = Controller(vendor="V", model="M")
     out = enrich_controller(

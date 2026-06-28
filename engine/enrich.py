@@ -48,6 +48,9 @@ def _merge(c: Controller, enr: dict, sources: list[str]) -> Controller:
 
     if data.get("rebrand_path") == "unknown" and enr.get("rebrand_path") in _VALID_REBRAND:
         data["rebrand_path"] = enr["rebrand_path"]
+    # A confirmed OEM/white-label program implies the oem_program rebrand path.
+    if data["oem"].get("offered") is True and data.get("rebrand_path") == "unknown":
+        data["rebrand_path"] = "oem_program"
 
     srcs = data.get("sources") or []
     for s in sources:

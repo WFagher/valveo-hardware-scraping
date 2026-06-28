@@ -1,10 +1,16 @@
 """Fetch a URL and reduce it to the main content text for LLM extraction."""
 from __future__ import annotations
 
+import logging
 import re
 
 import httpx
 from readability import Document
+
+# readability logs full tracebacks to stderr on unparseable pages even though we
+# fall back gracefully — silence it so discover/enrich output stays clean.
+logging.getLogger("readability").setLevel(logging.CRITICAL)
+logging.getLogger("readability.readability").setLevel(logging.CRITICAL)
 
 _SCRIPT = re.compile(r"<(script|style)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE)
 _TAG = re.compile(r"<[^>]+>")

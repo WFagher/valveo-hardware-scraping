@@ -10,6 +10,10 @@ from .models import Controller
 class DeviceStore:
     def __init__(self, db_path: Path) -> None:
         self.conn = sqlite3.connect(db_path)
+        # WAL + busy timeout: survive concurrent/interrupted access cleanly
+        # (avoids spurious "readonly database" after an interrupted write).
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA busy_timeout=5000")
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS controllers ("
             "key TEXT PRIMARY KEY, vendor TEXT, model TEXT, data TEXT)"

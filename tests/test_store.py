@@ -37,3 +37,12 @@ def test_get_missing_returns_none(tmp_path):
         assert store.get("nope::nope") is None
     finally:
         store.close()
+
+
+def test_store_uses_wal_mode(tmp_path):
+    store = DeviceStore(tmp_path / "devices.sqlite3")
+    try:
+        mode = store.conn.execute("PRAGMA journal_mode").fetchone()[0]
+        assert mode.lower() == "wal"
+    finally:
+        store.close()

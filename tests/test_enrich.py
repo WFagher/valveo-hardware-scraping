@@ -15,6 +15,10 @@ class FakeOllama:
         return self.resp
 
 
+def _accept_all(claims, source, **kw):
+    return {k: True for k in claims}
+
+
 def test_extract_enrichment_parses():
     resp = json.dumps({"country_of_origin": "Bulgaria", "ce": True, "red": True})
     d = extract_enrichment("t", ollama=FakeOllama(resp), model="m")
@@ -35,6 +39,7 @@ def test_enrich_fills_unknown_fields_and_records_sources():
         c, ollama=FakeOllama(resp), model="m",
         searcher=lambda q, **k: ["https://src/1"],
         fetch=lambda u, **k: "Teracom is based in Bulgaria, CE/RED certified, OEM available.",
+        verifier=_accept_all,
     )
     assert out.country_of_origin == "Bulgaria"
     assert out.cert.ce is True and out.cert.red is True
@@ -49,7 +54,8 @@ def test_enrich_does_not_overwrite_existing():
     out = enrich_controller(
         c, ollama=FakeOllama(resp), model="m",
         searcher=lambda q, **k: ["https://src/1"],
-        fetch=lambda u, **k: "text",
+        fetch=lambda u, **k: "V M product page with details.",
+        verifier=_accept_all,
     )
     assert out.country_of_origin == "China"  # not overwritten
     assert out.api_type is ApiType.native_mqtt
@@ -75,9 +81,24 @@ def test_oem_offered_implies_oem_program_rebrand():
         c, ollama=FakeOllama(resp), model="m",
         searcher=lambda q, **k: ["https://bliiot.com/rtu5022"],
         fetch=lambda u, **k: "BLIIoT RTU5022 — OEM and ODM services available.",
+        verifier=_accept_all,
     )
     assert out.oem.offered is True
     assert out.rebrand_path is RebrandPath.oem_program
+
+
+def test_verification_drops_unsupported_claim():
+    # the extractor proposes OEM, but verification refutes it -> not applied
+    c = Controller(vendor="BLIIoT", model="RTU5022")
+    resp = json.dumps({"oem_offered": True})
+    out = enrich_controller(
+        c, ollama=FakeOllama(resp), model="m",
+        searcher=lambda q, **k: ["https://bliiot.com/rtu5022"],
+        fetch=lambda u, **k: "BLIIoT RTU5022 datasheet — relay outputs, cellular.",
+        verifier=lambda claims, source, **k: {key: False for key in claims},
+    )
+    assert out.oem.offered is None
+    assert out.rebrand_path is RebrandPath.unknown
 
 
 def test_enrich_no_results_returns_unchanged():

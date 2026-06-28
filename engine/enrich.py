@@ -6,6 +6,7 @@ from collections.abc import Callable
 from .crawlers.fetcher import fetch_text
 from .crawlers.search import web_search
 from .extractors.enrich_extractor import extract_enrichment
+from .extractors.verifier import verify_claims
 from .models import Controller, RebrandPath
 
 _VALID_REBRAND = {e.value for e in RebrandPath}
@@ -27,6 +28,43 @@ def _queries(c: Controller) -> list[str]:
         f"{base} CE RED declaration of conformity",
         f"{c.vendor} company country headquarters",
     ]
+
+
+def _claim_texts(enr: dict, c: Controller) -> dict[str, str]:
+    """Turn candidate enriched values into checkable claim statements."""
+    dev = f"{c.vendor} {c.model}"
+    claims: dict[str, str] = {}
+    if enr.get("country_of_origin"):
+        claims["country_of_origin"] = (
+            f"The vendor {c.vendor} is based/headquartered in {enr['country_of_origin']}."
+        )
+    if enr.get("ce") is True:
+        claims["ce"] = f"The {dev} is CE marked / CE certified."
+    elif enr.get("ce") is False:
+        claims["ce"] = f"The source explicitly states the {dev} is NOT CE certified."
+    if enr.get("red") is True:
+        claims["red"] = f"The {dev} complies with the EU Radio Equipment Directive (RED)."
+    elif enr.get("red") is False:
+        claims["red"] = f"The source explicitly states the {dev} does NOT comply with RED."
+    if enr.get("oem_offered") is True:
+        claims["oem_offered"] = (
+            f"The vendor {c.vendor} offers OEM / ODM / white-label / private-label services."
+        )
+    elif enr.get("oem_offered") is False:
+        claims["oem_offered"] = f"The source explicitly states {c.vendor} does not offer OEM."
+    return claims
+
+
+def _verify(enr: dict, c: Controller, source: str, *, verifier, ollama, model: str) -> dict:
+    """Drop any candidate claim the source does not explicitly support."""
+    claims = _claim_texts(enr, c)
+    if not claims:
+        return enr
+    verdicts = verifier(claims, source, ollama=ollama, model=model)
+    for key, supported in verdicts.items():
+        if not supported:
+            enr[key] = None
+    return enr
 
 
 def _merge(c: Controller, enr: dict, sources: list[str]) -> Controller:
@@ -68,6 +106,7 @@ def enrich_controller(
     model: str,
     searcher: Callable[..., list[str]] = web_search,
     fetch: Callable[..., str] = fetch_text,
+    verifier: Callable[..., dict] = verify_claims,
     max_pages: int = 3,
 ) -> Controller:
     urls: list[str] = []
@@ -94,4 +133,5 @@ def enrich_controller(
 
     combined = "\n\n".join(t for _, t in texts)
     enr = extract_enrichment(combined, ollama=ollama, model=model)
+    enr = _verify(enr, c, combined, verifier=verifier, ollama=ollama, model=model)
     return _merge(c, enr, [u for u, _ in texts])

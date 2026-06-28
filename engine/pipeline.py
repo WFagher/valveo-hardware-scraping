@@ -27,10 +27,13 @@ def run_discovery_cycle(
     try:
         with OllamaClient(cfg.ollama_host) as ol:
             for url in urls:
-                text = fetch_text(url)
-                controller = extract_controller(
-                    text, ollama=ol, model=cfg.chat_model, source_url=url
-                )
+                try:
+                    text = fetch_text(url)
+                    controller = extract_controller(
+                        text, ollama=ol, model=cfg.chat_model, source_url=url
+                    )
+                except Exception:
+                    controller = None  # one unreachable URL must not abort the whole crawl
                 if controller is not None:
                     store.upsert(controller)
                     stored += 1

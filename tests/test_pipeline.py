@@ -17,6 +17,24 @@ class _DummyOllama:
         pass
 
 
+def test_run_discovery_cycle_survives_fetch_error(monkeypatch, tmp_path):
+    monkeypatch.setenv("ENGINE_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(pipeline, "OllamaClient", _DummyOllama)
+    monkeypatch.setattr(pipeline, "_seed_urls", lambda cfg: ["bad", "good"])
+
+    def fake_fetch(url, **k):
+        if url == "bad":
+            raise Exception("nodename nor servname provided")
+        return "text"
+
+    monkeypatch.setattr(pipeline, "fetch_text", fake_fetch)
+    monkeypatch.setattr(
+        pipeline, "extract_controller", lambda text, **kw: Controller(vendor="V", model="M")
+    )
+    stored, total = pipeline.run_discovery_cycle(Config.load())
+    assert stored == 1 and total == 2  # bad URL skipped, good URL still stored
+
+
 def test_run_discovery_cycle_stores_only_valid(monkeypatch, tmp_path):
     monkeypatch.setenv("ENGINE_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setattr(pipeline, "OllamaClient", _DummyOllama)

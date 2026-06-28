@@ -55,6 +55,19 @@ def test_enrich_does_not_overwrite_existing():
     assert out.api_type is ApiType.native_mqtt
 
 
+def test_enrich_skips_irrelevant_pages():
+    # a generic blog that doesn't name the device must not produce claims
+    c = Controller(vendor="Teracom", model="TCG120-4")
+    resp = json.dumps({"oem_offered": True, "rebrand_path": "oem_program"})
+    out = enrich_controller(
+        c, ollama=FakeOllama(resp), model="m",
+        searcher=lambda q, **k: ["https://generic/blog"],
+        fetch=lambda u, **k: "A general article about private label manufacturing strategies.",
+    )
+    assert out.oem.offered is None  # irrelevant source not applied
+    assert out == c
+
+
 def test_enrich_no_results_returns_unchanged():
     c = Controller(vendor="V", model="M")
     out = enrich_controller(

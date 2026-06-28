@@ -11,6 +11,15 @@ from .models import Controller, RebrandPath
 _VALID_REBRAND = {e.value for e in RebrandPath}
 
 
+def _is_relevant(text: str, c: Controller) -> bool:
+    """A source is only trustworthy for THIS device if it actually names the
+    vendor or model. Drops generic 'what is white-label' blog posts."""
+    low = text.lower()
+    model_l = c.model.lower()
+    token = model_l.split()[0] if model_l.split() else model_l
+    return c.vendor.lower() in low or model_l in low or (len(token) >= 4 and token in low)
+
+
 def _queries(c: Controller) -> list[str]:
     base = f"{c.vendor} {c.model}"
     return [
@@ -68,11 +77,15 @@ def enrich_controller(
             continue
 
     texts: list[tuple[str, str]] = []
-    for url in urls[:max_pages]:
+    for url in urls[: max_pages * 2]:
         try:
-            texts.append((url, fetch(url)))
+            text = fetch(url)
         except Exception:
             continue
+        if _is_relevant(text, c):  # only trust pages that name this device
+            texts.append((url, text))
+        if len(texts) >= max_pages:
+            break
     if not texts:
         return c
 

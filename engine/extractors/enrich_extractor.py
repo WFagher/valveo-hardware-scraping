@@ -20,7 +20,7 @@ _KEYS = (
 
 def build_enrich_messages(text: str) -> list[ChatMessage]:
     user = (
-        f"Extract these keys (null if not stated):\n{_KEYS}\n\nTEXT:\n{text[:16000]}"
+        f"Extract these keys (null if not stated):\n{_KEYS}\n\nTEXT:\n{text[:24000]}"
     )
     return [ChatMessage("system", _SYSTEM), ChatMessage("user", user)]
 

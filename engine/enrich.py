@@ -10,6 +10,8 @@ from .extractors.verifier import verify_claims
 from .models import Controller, RebrandPath
 
 _VALID_REBRAND = {e.value for e in RebrandPath}
+# Per-page budget so a nav-heavy first page doesn't starve later (CE/about) pages.
+_PER_PAGE = 8000
 
 
 def _is_relevant(text: str, c: Controller) -> bool:
@@ -131,7 +133,7 @@ def enrich_controller(
     if not texts:
         return c
 
-    combined = "\n\n".join(t for _, t in texts)
+    combined = "\n\n".join(t[:_PER_PAGE] for _, t in texts)
     enr = extract_enrichment(combined, ollama=ollama, model=model)
     enr = _verify(enr, c, combined, verifier=verifier, ollama=ollama, model=model)
     return _merge(c, enr, [u for u, _ in texts])

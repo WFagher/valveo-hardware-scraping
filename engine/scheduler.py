@@ -1,6 +1,7 @@
 """APScheduler daemon: continuous full discovery+enrich+report cycle, 24/7."""
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from datetime import datetime
@@ -10,9 +11,11 @@ from apscheduler.triggers.interval import IntervalTrigger
 from rich.console import Console
 
 from .config import Config
+from .health.monitor import HealthGate
 from .pipeline import run_full_cycle
 
 console = Console()
+_gate = HealthGate()
 
 
 def _cycle_minutes() -> int:
@@ -23,6 +26,12 @@ def _cycle_minutes() -> int:
 
 
 def _cycle_job(cfg: Config) -> None:
+    status, snap = _gate.current_status()
+    console.print(f"[health] {snap.summary_line()}")
+    # Pause / skip the cycle if the machine is hot — protects 24/7 operation.
+    if not _gate.wait_until_ok("cycle"):
+        console.print("[cycle] skipped — machine too hot")
+        return
     try:
         ts = datetime.now().isoformat(timespec="minutes")
         result = run_full_cycle(cfg, timestamp=ts)
@@ -33,6 +42,8 @@ def _cycle_job(cfg: Config) -> None:
         )
     except Exception as exc:  # a bad cycle must never kill the daemon
         console.print(f"[cycle] error: {exc}")
+    finally:
+        _gate.cooldown.mark_completed()
 
 
 def build_scheduler(cfg: Config) -> BlockingScheduler:
@@ -55,6 +66,8 @@ def start() -> None:
         sys.stdout.reconfigure(line_buffering=True)
     except Exception:
         pass
+    # Surface health-gate warnings (waiting / skipping when hot) in the log.
+    logging.basicConfig(level=logging.WARNING, format="%(message)s")
     cfg = Config.load()
     console.print(
         f"[bold]engine scheduler[/bold] — full cycle every {_cycle_minutes()} min, 24/7. "

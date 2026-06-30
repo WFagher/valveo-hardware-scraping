@@ -242,6 +242,26 @@ def cycle() -> None:
 
 
 @main.command()
+@click.option("--watch", is_flag=True, help="Refresh every 2s until Ctrl+C.")
+def health(watch: bool) -> None:
+    """Show machine health (CPU / memory / temperature) and the gate status."""
+    import time
+
+    from .health.monitor import SystemHealth
+
+    sh = SystemHealth()
+    if not watch:
+        console.print(sh.snapshot().summary_line())
+        return
+    try:
+        while True:
+            console.print(sh.snapshot().summary_line())
+            time.sleep(2)
+    except KeyboardInterrupt:
+        pass
+
+
+@main.command()
 def scheduler() -> None:
     """Start the always-on 24/7 scheduler (continuous prospect+enrich+report cycle)."""
     from .scheduler import start

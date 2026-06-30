@@ -13,6 +13,7 @@ dependencies = [
     "apscheduler>=3.10",
     "readability-lxml>=0.8",
     "lxml>=5.0",
+    "psutil>=6.0",
 ]
 
 [dependency-groups]

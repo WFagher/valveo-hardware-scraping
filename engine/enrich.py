@@ -1,6 +1,7 @@
 """Per-device enrichment: fill OEM/CE/origin/rebrand from cited web sources."""
 from __future__ import annotations
 
+import urllib.parse
 from collections.abc import Callable
 
 from .crawlers.fetcher import fetch_main
@@ -21,6 +22,21 @@ def _is_relevant(text: str, c: Controller) -> bool:
     model_l = c.model.lower()
     token = model_l.split()[0] if model_l.split() else model_l
     return c.vendor.lower() in low or model_l in low or (len(token) >= 4 and token in low)
+
+
+def _vendor_domain_present(urls: list[str], c: Controller) -> bool:
+    """True if any source is on the vendor's OWN domain (not a reseller/distributor).
+
+    Used to gate origin claims — a reseller page can't establish a vendor's origin.
+    """
+    vk = "".join(ch for ch in c.vendor.lower() if ch.isalnum())
+    if not vk:
+        return False
+    for url in urls:
+        host = urllib.parse.urlparse(url).netloc.lower()
+        if vk in "".join(ch for ch in host if ch.isalnum()):
+            return True
+    return False
 
 
 def _queries(c: Controller) -> list[str]:
@@ -138,4 +154,8 @@ def enrich_controller(
     combined = "\n\n".join(t[:_PER_PAGE] for _, t in texts)
     enr = extract_enrichment(combined, ollama=ollama, model=model)
     enr = _verify(enr, c, combined, verifier=verifier, ollama=ollama, model=model)
-    return _merge(c, enr, [u for u, _ in texts])
+    # Origin is only trustworthy from the vendor's OWN domain, not a reseller's page.
+    source_urls = [u for u, _ in texts]
+    if enr.get("country_of_origin") and not _vendor_domain_present(source_urls, c):
+        enr["country_of_origin"] = None
+    return _merge(c, enr, source_urls)

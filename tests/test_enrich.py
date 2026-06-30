@@ -37,7 +37,7 @@ def test_enrich_fills_unknown_fields_and_records_sources():
     )
     out = enrich_controller(
         c, ollama=FakeOllama(resp), model="m",
-        searcher=lambda q, **k: ["https://src/1"],
+        searcher=lambda q, **k: ["https://teracomsystems.com/about"],
         fetch=lambda u, **k: "Teracom is based in Bulgaria, CE/RED certified, OEM available.",
         verifier=_accept_all,
     )
@@ -45,7 +45,7 @@ def test_enrich_fills_unknown_fields_and_records_sources():
     assert out.cert.ce is True and out.cert.red is True
     assert out.oem.offered is True
     assert out.rebrand_path is RebrandPath.oem_program
-    assert "https://src/1" in out.sources
+    assert "https://teracomsystems.com/about" in out.sources
 
 
 def test_enrich_does_not_overwrite_existing():
@@ -85,6 +85,31 @@ def test_oem_offered_implies_oem_program_rebrand():
     )
     assert out.oem.offered is True
     assert out.rebrand_path is RebrandPath.oem_program
+
+
+def test_origin_dropped_when_only_reseller_source():
+    # origin claim from a non-vendor (reseller) domain must be dropped
+    c = Controller(vendor="Milesight", model="UC300")
+    resp = json.dumps({"country_of_origin": "US"})
+    out = enrich_controller(
+        c, ollama=FakeOllama(resp), model="m",
+        searcher=lambda q, **k: ["https://iotnvr.com/milesight-uc300"],
+        fetch=lambda u, **k: "Milesight UC300 — buying from US?",
+        verifier=_accept_all,
+    )
+    assert out.country_of_origin is None
+
+
+def test_origin_kept_from_vendor_domain():
+    c = Controller(vendor="BLIIoT", model="RTU5022")
+    resp = json.dumps({"country_of_origin": "China"})
+    out = enrich_controller(
+        c, ollama=FakeOllama(resp), model="m",
+        searcher=lambda q, **k: ["https://www.bliiot.com/about-us"],
+        fetch=lambda u, **k: "BLIIoT RTU5022 — headquartered in China.",
+        verifier=_accept_all,
+    )
+    assert out.country_of_origin == "China"
 
 
 def test_verification_drops_unsupported_claim():

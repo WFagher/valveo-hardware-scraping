@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime
 
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -49,6 +50,11 @@ def build_scheduler(cfg: Config) -> BlockingScheduler:
 
 
 def start() -> None:
+    # Stream the log live even when redirected to a file (nohup block-buffers otherwise).
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except Exception:
+        pass
     cfg = Config.load()
     console.print(
         f"[bold]engine scheduler[/bold] — full cycle every {_cycle_minutes()} min, 24/7. "

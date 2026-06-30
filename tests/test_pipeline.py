@@ -17,6 +17,38 @@ class _DummyOllama:
         pass
 
 
+def test_discovery_preserves_enrichment(monkeypatch, tmp_path):
+    from engine.models import RebrandPath
+
+    monkeypatch.setenv("ENGINE_DATA_DIR", str(tmp_path / "data"))
+    # pre-store an enriched device
+    store = DeviceStore(Config.load().db_path())
+    enriched = Controller(
+        vendor="V", model="M", country_of_origin="China", rebrand_path=RebrandPath.oem_program
+    )
+    enriched.oem.offered = True
+    store.upsert(enriched)
+    store.close()
+
+    # discover re-extracts the same device with fresh specs but NO enrichment fields
+    monkeypatch.setattr(pipeline, "OllamaClient", _DummyOllama)
+    monkeypatch.setattr(pipeline, "_seed_urls", lambda cfg: ["u"])
+    monkeypatch.setattr(pipeline, "fetch_text", lambda url, **k: "text")
+    monkeypatch.setattr(
+        pipeline, "extract_controller",
+        lambda text, **kw: Controller(vendor="V", model="M", cellular=True),
+    )
+    pipeline.run_discovery_cycle(Config.load())
+
+    store = DeviceStore(Config.load().db_path())
+    got = store.get("v::m")
+    store.close()
+    assert got.cellular is True  # fresh spec applied
+    assert got.country_of_origin == "China"  # enrichment preserved
+    assert got.oem.offered is True
+    assert got.rebrand_path is RebrandPath.oem_program
+
+
 def test_run_discovery_cycle_survives_fetch_error(monkeypatch, tmp_path):
     monkeypatch.setenv("ENGINE_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setattr(pipeline, "OllamaClient", _DummyOllama)

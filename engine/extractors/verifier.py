@@ -6,10 +6,14 @@ import json
 from ..llm.ollama_client import ChatMessage
 
 _SYSTEM = (
-    "You are a strict fact-checker. Given SOURCE text and a set of keyed CLAIMS, decide for each "
-    "claim whether the SOURCE EXPLICITLY supports it. Answer true ONLY if the source clearly states "
-    "it; if the source does not clearly state it, answer false. Do NOT use outside knowledge. "
-    "Return ONLY a JSON object mapping each claim key to true or false."
+    "You are a STRICT, skeptical fact-checker. For each keyed CLAIM, decide whether the SOURCE "
+    "text EXPLICITLY and SPECIFICALLY supports it about the named company/product. "
+    "Answer true ONLY if the source clearly and directly states it. Answer FALSE if: it is merely "
+    "implied; the source is a reseller/distributor/marketplace rather than the manufacturer; a "
+    "country is only mentioned as a shipping, office, or reseller location without stating the "
+    "company's OWN headquarters or country of origin; or you are unsure. When in doubt, answer "
+    "false. Do NOT use outside knowledge. Return ONLY a JSON object mapping each claim key to "
+    "true or false."
 )
 
 

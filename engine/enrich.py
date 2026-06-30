@@ -38,7 +38,9 @@ def _claim_texts(enr: dict, c: Controller) -> dict[str, str]:
     claims: dict[str, str] = {}
     if enr.get("country_of_origin"):
         claims["country_of_origin"] = (
-            f"The vendor {c.vendor} is based/headquartered in {enr['country_of_origin']}."
+            f"The source explicitly states that {c.vendor}'s OWN company headquarters or country "
+            f"of origin (NOT a reseller, distributor, or shipping location) is "
+            f"{enr['country_of_origin']}."
         )
     if enr.get("ce") is True:
         claims["ce"] = f"The {dev} is CE marked / CE certified."

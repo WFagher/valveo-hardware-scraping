@@ -1,0 +1,15 @@
+# Web-search queries the prospector uses to find NEW candidate device pages.
+# Broad enough to sweep the whole market for cellular connected-relay controllers.
+queries:
+  - "4G LTE cellular IO controller relay MQTT"
+  - "cellular access control relay controller OEM white label"
+  - "4G RTU relay output MQTT REST API controller"
+  - "LTE-M relay controller REST API industrial IoT"
+  - "GSM 4G remote relay controller Wiegand access control"
+  - "cellular door controller relay MQTT manufacturer"
+  - "4G IoT controller relay outputs configurable no programming"
+  - "industrial cellular RTU relay MQTT OEM ODM"
+  - "4G LTE access control panel relay OSDP cellular"
+  - "SIM card relay controller remote door opener MQTT"
+  - "NB-IoT LTE relay output controller Modbus MQTT"
+  - "4G cellular smart relay board RFID reader interface"

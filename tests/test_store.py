@@ -39,6 +39,18 @@ def test_get_missing_returns_none(tmp_path):
         store.close()
 
 
+def test_seen_tracking(tmp_path):
+    store = DeviceStore(tmp_path / "devices.sqlite3")
+    try:
+        assert store.is_seen("http://x") is False
+        store.mark_seen("http://x")
+        store.mark_seen("http://x")  # idempotent
+        assert store.is_seen("http://x") is True
+        assert store.seen_count() == 1
+    finally:
+        store.close()
+
+
 def test_store_uses_wal_mode(tmp_path):
     store = DeviceStore(tmp_path / "devices.sqlite3")
     try:

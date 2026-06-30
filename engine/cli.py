@@ -14,7 +14,7 @@ from .drafters.deep_dive import generate_deep_dive
 from .enrich import enrich_controller
 from .extractors.spec_extractor import extract_controller
 from .llm.ollama_client import OllamaClient
-from .pipeline import run_discovery_cycle
+from .pipeline import run_discovery_cycle, run_full_cycle, run_prospect_cycle
 from .research_config import load_requirements, load_scoring
 from .store import DeviceStore
 
@@ -212,8 +212,38 @@ def enrich(key: str | None) -> None:
 
 
 @main.command()
+@click.option("--max", "max_new", default=12, help="Max new pages to process this run.")
+def prospect(max_new: int) -> None:
+    """Open-ended discovery: search the web for NEW devices and store them."""
+    cfg = Config.load()
+
+    def _print(url: str, controller) -> None:
+        if controller is not None and controller.cellular:
+            console.print(f"  [green]+[/green] {controller.vendor} {controller.model}")
+        else:
+            console.print(f"  [dim]-[/dim] {url}")
+
+    stored, total = run_prospect_cycle(cfg, on_result=_print, max_new=max_new)
+    console.print(f"Prospected {stored} new cellular controllers from {total} pages.")
+
+
+@main.command()
+def cycle() -> None:
+    """Run ONE full autonomous pass: prospect + re-crawl seeds + enrich + write report."""
+    from datetime import datetime
+
+    cfg = Config.load()
+    result = run_full_cycle(cfg, timestamp=datetime.now().isoformat(timespec="minutes"))
+    console.print(
+        f"prospected {result['prospected']} · discovered {result['discovered']} · "
+        f"enriched {result['enriched']}"
+    )
+    console.print(f"[green]Report:[/green] {result['report']}")
+
+
+@main.command()
 def scheduler() -> None:
-    """Start the always-on scheduler (daily discovery re-crawl)."""
+    """Start the always-on 24/7 scheduler (continuous prospect+enrich+report cycle)."""
     from .scheduler import start
 
     start()

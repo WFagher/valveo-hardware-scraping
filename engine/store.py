@@ -18,6 +18,8 @@ class DeviceStore:
             "CREATE TABLE IF NOT EXISTS controllers ("
             "key TEXT PRIMARY KEY, vendor TEXT, model TEXT, data TEXT)"
         )
+        # URLs already processed by the prospector (so we never re-crawl them).
+        self.conn.execute("CREATE TABLE IF NOT EXISTS seen (url TEXT PRIMARY KEY)")
         self.conn.commit()
 
     def upsert(self, c: Controller) -> None:
@@ -41,6 +43,16 @@ class DeviceStore:
 
     def count(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM controllers").fetchone()[0]
+
+    def mark_seen(self, url: str) -> None:
+        self.conn.execute("INSERT OR IGNORE INTO seen(url) VALUES(?)", (url,))
+        self.conn.commit()
+
+    def is_seen(self, url: str) -> bool:
+        return self.conn.execute("SELECT 1 FROM seen WHERE url=?", (url,)).fetchone() is not None
+
+    def seen_count(self) -> int:
+        return self.conn.execute("SELECT COUNT(*) FROM seen").fetchone()[0]
 
     def close(self) -> None:
         self.conn.close()

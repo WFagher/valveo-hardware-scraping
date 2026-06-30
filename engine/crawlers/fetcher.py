@@ -1,4 +1,9 @@
-"""Fetch a URL and reduce it to the main content text for LLM extraction."""
+"""Fetch a URL as text.
+
+Two flavours, because discovery and enrichment have opposite needs:
+- `fetch_text`  → full page (tags stripped, spec TABLES kept) — for spec extraction.
+- `fetch_main`  → main content only (nav/footer stripped via readability) — for enrichment.
+"""
 from __future__ import annotations
 
 import logging
@@ -25,7 +30,7 @@ def strip_html(html: str) -> str:
 
 
 def extract_main(html: str) -> str:
-    """Main article/content text, with nav/footer/sidebar stripped (readability).
+    """Main article/content text with nav/footer/sidebar stripped (readability).
 
     Falls back to a plain tag-strip when readability finds too little.
     """
@@ -38,7 +43,7 @@ def extract_main(html: str) -> str:
     return strip_html(html)
 
 
-def fetch_text(url: str, *, client: httpx.Client | None = None, timeout: float = 30.0) -> str:
+def _get(url: str, client: httpx.Client | None, timeout: float) -> str:
     owns = client is None
     client = client or httpx.Client(
         timeout=timeout, follow_redirects=True, headers={"User-Agent": _UA}
@@ -46,7 +51,17 @@ def fetch_text(url: str, *, client: httpx.Client | None = None, timeout: float =
     try:
         resp = client.get(url)
         resp.raise_for_status()
-        return extract_main(resp.text)
+        return resp.text
     finally:
         if owns:
             client.close()
+
+
+def fetch_text(url: str, *, client: httpx.Client | None = None, timeout: float = 30.0) -> str:
+    """Full page text (keeps spec tables) — used for device spec extraction."""
+    return strip_html(_get(url, client, timeout))
+
+
+def fetch_main(url: str, *, client: httpx.Client | None = None, timeout: float = 30.0) -> str:
+    """Main-content text (nav stripped) — used for enrichment."""
+    return extract_main(_get(url, client, timeout))

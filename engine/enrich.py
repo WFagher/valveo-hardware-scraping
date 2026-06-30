@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .crawlers.fetcher import fetch_text
+from .crawlers.fetcher import fetch_main
 from .crawlers.search import web_search
 from .extractors.enrich_extractor import extract_enrichment
 from .extractors.verifier import verify_claims
@@ -107,7 +107,7 @@ def enrich_controller(
     ollama,
     model: str,
     searcher: Callable[..., list[str]] = web_search,
-    fetch: Callable[..., str] = fetch_text,
+    fetch: Callable[..., str] = fetch_main,
     verifier: Callable[..., dict] = verify_claims,
     max_pages: int = 3,
 ) -> Controller:
